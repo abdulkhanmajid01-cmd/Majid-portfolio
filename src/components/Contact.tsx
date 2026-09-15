@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Mail, Send } from "lucide-react";
+import { ArrowUpRight, Mail, Send, Loader2 } from "lucide-react";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/SectionHeading";
 import { GitHubIcon, LinkedInIcon } from "@/components/icons";
@@ -17,13 +17,66 @@ export function Contact() {
   const [budget, setBudget] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"success" | "error" | null>(null);
+
+  // Your HubSpot Portal ID & Form GUID
+  const PORTAL_ID = "246572008";
+  const FORM_GUID = "08a8edfa-8580-4e7c-9409-d2d4e234831d";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`Project inquiry — ${projectType || "General"}`);
-    const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\nProject Type: ${projectType}\nBudget: ${budget}\n\n${message}`
-    );
-    window.location.href = `mailto:${site.email}?subject=${subject}&body=${body}`;
+    setLoading(true);
+    setStatus(null);
+
+    // Split Name into First Name & Last Name for HubSpot
+    const nameParts = name.trim().split(" ");
+    const firstname = nameParts[0] || "";
+    const lastname = nameParts.slice(1).join(" ") || "";
+
+    const payload = {
+      fields: [
+        { name: "firstname", value: firstname },
+        { name: "lastname", value: lastname },
+        { name: "email", value: email },
+        { name: "project_type", value: projectType }, // Internal property name
+        { name: "budget", value: budget },             // Internal property name
+        { name: "message", value: message },
+      ],
+      context: {
+        pageUri: typeof window !== "undefined" ? window.location.href : "",
+        pageName: typeof document !== "undefined" ? document.title : "",
+      },
+    };
+
+    try {
+      const res = await fetch(
+        `https://api.hsforms.com/submissions/v3/integration/submit/${PORTAL_ID}/${FORM_GUID}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (res.ok) {
+        setStatus("success");
+        setName("");
+        setEmail("");
+        setProjectType("");
+        setBudget("");
+        setMessage("");
+      } else {
+        setStatus("error");
+      }
+    } catch (error) {
+      console.error("HubSpot submission error:", error);
+      setStatus("error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,6 +143,7 @@ export function Contact() {
                     value={projectType}
                     onChange={(e) => setProjectType(e.target.value)}
                     className={inputClass}
+                    required
                   >
                     <option value="">Select a type</option>
                     <option>Full-Stack Web App</option>
@@ -113,6 +167,7 @@ export function Contact() {
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
                     className={inputClass}
+                    required
                   >
                     <option value="">Select a range</option>
                     <option>Under $500</option>
@@ -142,11 +197,33 @@ export function Contact() {
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 bg-accent text-background rounded-lg px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
+                disabled={loading}
+                className="inline-flex items-center gap-2 bg-accent text-background rounded-lg px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
               >
-                Send Message
-                <Send className="w-4 h-4" />
+                {loading ? (
+                  <>
+                    Sending...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    Send Message
+                    <Send className="w-4 h-4" />
+                  </>
+                )}
               </button>
+
+              {/* Success / Error Status Notifications */}
+              {status === "success" && (
+                <p className="text-xs text-emerald-400 font-medium pt-1">
+                  Thank you! Your message has been sent successfully. Check your email for details.
+                </p>
+              )}
+              {status === "error" && (
+                <p className="text-xs text-rose-400 font-medium pt-1">
+                  Something went wrong. Please try again or reach out via email.
+                </p>
+              )}
             </form>
           </Reveal>
 
