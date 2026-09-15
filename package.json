@@ -1,6 +1,6 @@
 {
-  "name": "portfolio-scaffold",
-  "version": "0.1.0",
+  "name": "abdul-majid-khan-portfolio",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "framer-motion": "^13.1.0",
+    "lucide-react": "^1.32.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
